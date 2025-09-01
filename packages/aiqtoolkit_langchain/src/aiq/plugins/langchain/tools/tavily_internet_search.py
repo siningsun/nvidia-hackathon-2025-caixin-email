@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
+# You may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
@@ -13,13 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.builder.builder import Builder
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.function import FunctionBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.function import FunctionBaseConfig
+
+import os
+import ssl
+import certifi
+import aiohttp
+from langchain_tavily import TavilySearch
 
 
-# Internet Search tool
+# Internet Search tool configuration
 class TavilyInternetSearchToolConfig(FunctionBaseConfig, name="tavily_internet_search"):
     """
     Tool that retrieves relevant contexts from web search (using Tavily) for the given question.
@@ -31,30 +37,50 @@ class TavilyInternetSearchToolConfig(FunctionBaseConfig, name="tavily_internet_s
 
 @register_function(config_type=TavilyInternetSearchToolConfig)
 async def tavily_internet_search(tool_config: TavilyInternetSearchToolConfig, builder: Builder):
-    import os
-
-    from langchain_community.tools import TavilySearchResults
-
-    if not os.environ.get("TAVILY_API_KEY"):
+    # 设置 API Key
+    if not os.environ.get("TAVILY_API_KEY") and tool_config.api_key:
         os.environ["TAVILY_API_KEY"] = tool_config.api_key
-    # This tavily tool requires an API Key and it must be set as an environment variable (TAVILY_API_KEY)
-    # Refer to create_customize_workflow.md for instructions of getting the API key
+
+    # 创建 TavilySearch 实例
+    tavily_search = TavilySearch(max_results=tool_config.max_results)
 
     async def _tavily_internet_search(question: str) -> str:
-        # Search the web and get the requested amount of results
-        tavily_search = TavilySearchResults(max_results=tool_config.max_results)
-        search_docs = await tavily_search.ainvoke({'query': question})
-        # Format
-        web_search_results = "\n\n---\n\n".join(
-            [f'<Document href="{doc["url"]}"/>\n{doc["content"]}\n</Document>' for doc in search_docs])
+        # 使用 certifi 提供的 CA 证书进行 SSL 验证
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl_context)) as session:
+            search_docs = await tavily_search.ainvoke({'query': question}, session=session)
+
+        # 调试输出
+        print("search_docs:", search_docs)
+        print("type(search_docs):", type(search_docs))
+
+        # 兼容返回类型和错误
+        if isinstance(search_docs, dict) and "error" in search_docs:
+            web_search_results = f"<Document>Error: {search_docs['error']}</Document>"
+        elif isinstance(search_docs, str):
+            web_search_results = f"<Document>{search_docs}</Document>"
+        elif isinstance(search_docs, list):
+            web_search_results = "\n\n---\n\n".join(
+                [
+                    f'<Document href="{doc.get("url", "#")}"/>\n{doc.get("content", doc)}\n</Document>'
+                    if isinstance(doc, dict) else f"<Document>{doc}</Document>"
+                    for doc in search_docs
+                ]
+            )
+        else:
+            web_search_results = f"<Document>{str(search_docs)}</Document>"
+
         return web_search_results
 
-    # Create a Generic AIQ Toolkit tool that can be used with any supported LLM framework
+    # 注册为 NAT 可调用工具
     yield FunctionInfo.from_fn(
         _tavily_internet_search,
-        description=("""This tool retrieves relevant contexts from web search (using Tavily) for the given question.
+        description=(
+            """This tool retrieves relevant contexts from web search (using Tavily) for the given question.
 
-                        Args:
-                            question (str): The question to be answered.
-                    """),
+            Args:
+                question (str): The question to be answered.
+            """
+        ),
     )
