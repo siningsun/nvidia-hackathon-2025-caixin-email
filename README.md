@@ -1,6 +1,7 @@
 # NVIDIA Hackathon 财新周刊摘要邮件推送 agent
 
 > 🏆 **黑客松项目** - 基于NVIDIA官方NeMo Agent Toolkit构建的财新周刊摘要邮件推送 agent，展示AI Agent的强大功能
+
 ![AI-提问](docs/front-ui-question.png)
 ![财新周刊封面报道](docs/caixin-weekly-coverstory.png)
 ![agent推送的邮件](docs/email-summary.png)
@@ -9,13 +10,14 @@
 本项目基于NVIDIA官方NeMo Agent Toolkit的开发架构，实现了一个 React agent。
 
 ### Agent Workflow简介: 
-自定义的`caixin_scrapper`工具抓取财新周刊封面报道信息，将摘要内容写入`memory`， 自定义的`email_newsletter`读取`memory`，将摘要内容写入正文，利用smtp服务发送邮件到用户邮箱。
+- 自定义的`RedisMemoryEditor`继承了`aiq.memory.interfaces`中的`MemoryEditor`, 实现了插入`MemoryItem`和搜索`MemoryItem`的功能。`Memory`可以解决大模型 stateless 的问题，让agent 中间流转过程的大模型回答被后续的 tool/新的大模型调用利用。
+- 自定义的`caixin_scrapper`工具抓取财新周刊封面报道信息，将摘要内容写入`memory`， 自定义的`email_newsletter`读取`memory`，将摘要内容写入正文，利用smtp服务发送邮件到用户邮箱。
 
 ### ✨ 核心特性
 - 🤖 **官方架构**: 100%使用NVIDIA官方NeMo Agent Toolkit
 - 🌐 **抓取财新周刊封面报道内容**: Python中的`httpx`发送请求，得到形式为json数组的内容，然后写入`memory`
 - 📧 **smtp邮件服务**: 读取`memory`, 处理json内容转换为html, 结合`aiosmtplib`库发送邮件
-- 🧬 **Redis实例实现Memory功能**: 
+- 🧬 **Redis实例实现Memory功能**: 继承实现`aiq.memory.interfaces`中的`MemoryEditor`中写入和读取功能
 - 🎨 **现代界面**: 官方UI，支持实时对话和流式响应
 - 🚀 **一键部署**: 跨平台安装脚本，支持Windows/Linux/macOS
 
