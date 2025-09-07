@@ -1,19 +1,21 @@
-# NVIDIA NeMo Agent Toolkit AI对话机器人
+# NVIDIA Hackathon 财新周刊摘要邮件推送 agent
 
-> 🏆 **黑客松项目** - 基于NVIDIA官方NeMo Agent Toolkit构建的智能对话机器人，展示AI Agent的强大功能
+> 🏆 **黑客松项目** - 基于NVIDIA官方NeMo Agent Toolkit构建的财新周刊摘要邮件推送 agent，展示AI Agent的强大功能
 
-![AI对话机器人界面](docs/ui_screenshot.png)
+![财新周刊封面报道](docs/caixin-weekly-coverstory.png)
+![agent推送的邮件](docs/email-summary.png)
 
 ## 🎯 项目简介
+本项目基于NVIDIA官方NeMo Agent Toolkit的开发架构，实现了一个 React agent。
 
-本项目是为推广NVIDIA NeMo Agent Toolkit而开发的AI对话机器人示例，完全基于NVIDIA官方技术栈构建。系统集成了实时网络搜索、时间查询等功能，支持用户自定义OpenAI兼容的API接口，是学习和体验AI Agent技术的完美起点。
+### Agent Workflow简介: 
+自定义的caixin_scrapper 工具抓取财新周刊封面报道信息，将摘要(其实为json数组)写入 memory，email_newsletter 读取 memory，将摘要内容写入正文，利用 smfp服务发送到用户邮箱。
 
 ### ✨ 核心特性
-
 - 🤖 **官方架构**: 100%使用NVIDIA官方NeMo Agent Toolkit
-- 🌐 **实时搜索**: 集成Tavily API，支持实时网络搜索
-- ⏰ **时间查询**: 获取当前日期和时间信息
-- 🔧 **灵活配置**: 支持任何OpenAI兼容的API接口
+- 🌐 **抓取财新周刊封面报道内容**: 
+- 📧 **smtp邮件服务**: 
+- 🧬 **Redis实例实现Memory功能**: 
 - 🎨 **现代界面**: 官方UI，支持实时对话和流式响应
 - 🚀 **一键部署**: 跨平台安装脚本，支持Windows/Linux/macOS
 
@@ -27,30 +29,43 @@
 ### 后端
 - **核心**: [NVIDIA NeMo Agent Toolkit (AIQ)](https://github.com/NVIDIA/NeMo-Agent-Toolkit/tree/develop)
 - **工作流**: React Agent
-- **工具**: Tavily搜索、时间查询
+- **工具**: caixin_scrapper, email_newsletter, mem0_memory, text_file_ingest
+- **工具功能概要**
+  - caixin_scrapper: 抓取财新周刊封面报道内容, 写入memory
+  - email_newsletter: 读取 memory, 发送到用户邮箱
+  - mem0_memory: 提供 memory 实例，实例化 add_items/search 功能
+  - text_file_ingest: 搜索本地文件的内容并加载
 
-### 模型支持
-- **默认**: Qwen模型
-- **兼容**: 任何OpenAI格式的API
-- **自定义**: 用户可配置API密钥、模型名称、base_url
+### 后端工作目录
+```
+HACKATHON_AIQTOOLKIT
+  └──NeMo-Agent-Toolkit
+        ├── configs/
+        │   └── hackathon_config.yml  #核心配置
+        ├── mytools/
+        │   ├── caixin_scrapper/      
+        │   │   └── src/              
+        │   ├── email_newsletter/     
+        │   │   └── src/
+        │   ├── mem0_memory/          
+        │   │   └── src/
+        │   └── text_file_ingest/     
+        │       └── src/
+        ├── start.sh
+        └── stop.sh
+```
+### 模型选择
 
 ## 🚀 快速开始
 
-### 📋 环境要求
-
-- **Python**: 3.12+
-- **Node.js**: 18+
-- **Git**: 最新版本
-- **操作系统**: Windows 10+/macOS 10.15+/Ubuntu 20.04+
-
-### ⚡ 一键安装
+### ⚡ 一键启动
 
 #### 克隆项目
 ```bash
 git clone https://github.com/HeKun-NVIDIA/hackathon_aiqtoolkit.git
 cd hackathon_aiqtoolkit
 ```
-### 🔑 配置API密钥
+### 🔑 配置环境变量
 
 安装完成后，您需要配置以下API密钥：
 
@@ -85,22 +100,13 @@ llms:
 - **阿里云百炼平台Qwen系列**: `https://bailian.console.aliyun.com/?tab=model#/model-market`
 - **其他**: 任何OpenAI兼容的API
 
-#### Linux/macOS
-```bash
-# 运行安装脚本
-chmod +x install.sh
-./install.sh
-```
-
-#### Windows
-```powershell
-# 运行安装脚本
-install.bat
-```
-
-
-
 ### 🎮 启动系统
+
+#### 启动Redis实例
+
+```
+docker build 
+```
 
 ```bash
 # 启动服务
@@ -119,115 +125,10 @@ cd NeMo-Agent-Toolkit
 
 ## 🧪 功能测试
 
-### 网络搜索测试
+### 测试
 ```
 用户: 北京今天的天气怎么样，气温是多少？
 AI: 今天北京天气晴朗，气温在18℃至31℃之间，当前温度约30℃，西南风3级，相对湿度43%，空气质量良好，体感温度舒适。白天最高气温可达31℃，夜间最低18℃，全天无降水，紫外线较强，建议做好防晒措施。
-```
-
-### 时间查询测试
-```
-用户: 现在几点了？
-AI: 现在是晚上11点17分。
-```
-
-### 公司信息搜索测试
-```
-用户: 帮我介绍一下NVIDIA Agent Intelligence Toolkit
-AI: [搜索并介绍NVIDIA AIQ工具包的详细信息]
-```
-
-## 📁 项目结构
-
-```
-nvidia-nemo-agent-toolkit-hackathon/
-├── configs/                    # 配置文件
-│   └── hackathon_config.yml   # 主配置文件
-├── external/                   # 外部模块
-│   └── aiqtoolkit-opensource-ui/  # 官方UI
-├── docs/                       # 文档和截图
-│   └── ui_screenshot.png      # 界面截图
-├── src/                        # 源代码
-├── install.sh                  # Linux/macOS安装脚本
-├── install.bat                 # Windows安装脚本
-├── start.sh                    # 启动脚本
-├── stop.sh                     # 停止脚本
-└── README.md                   # 说明文档
-```
-
-## ⚙️ 高级配置
-
-### 自定义工具
-
-在配置文件中添加新工具：
-
-```yaml
-functions:
-  your_custom_tool:
-    _type: your_tool_type
-    description: "工具描述"
-    # 其他配置参数
-```
-
-### 自定义工作流
-
-```yaml
-workflow:
-  _type: react_agent
-  tool_names:
-    - internet_search
-    - current_datetime
-    - your_custom_tool
-  llm_name: default_llm
-  verbose: true
-```
-
-### 调试模式
-
-```bash
-# 启用详细日志
-aiq serve --config_file configs/hackathon_config.yml --verbose
-```
-
-## 🐛 故障排除
-
-### 常见问题
-
-#### 1. 端口占用
-```bash
-# 检查端口占用
-netstat -tlnp | grep :8001
-
-# 使用不同端口
-aiq serve --port 8002
-```
-
-#### 2. API密钥错误
-- 检查 `configs/hackathon_config.yml` 中的API密钥配置
-- 确认环境变量 `TAVILY_API_KEY` 已正确设置
-- 验证API密钥的有效性和权限
-
-#### 3. 依赖安装失败
-```bash
-# 清理缓存重新安装
-uv cache clean
-uv pip install -e . --force-reinstall
-```
-
-#### 4. 前端无法连接后端
-- 检查后端是否正常启动（访问 http://localhost:8001/health）
-- 确认端口配置正确
-- 检查防火墙设置
-
-### 日志查看
-
-```bash
-# 查看后端日志
-tail -f logs/aiq.log
-
-# 查看前端日志
-cd external/aiqtoolkit-opensource-ui
-npm run dev -- --verbose
 ```
 
 ## 📚 相关资源
