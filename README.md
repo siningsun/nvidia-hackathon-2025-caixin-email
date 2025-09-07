@@ -1,7 +1,7 @@
 # NVIDIA Hackathon 财新周刊摘要邮件推送 agent
 
 > 🏆 **黑客松项目** - 基于NVIDIA官方NeMo Agent Toolkit构建的财新周刊摘要邮件推送 agent，展示AI Agent的强大功能
-
+![AI-提问](docs/front-ui-question.png)
 ![财新周刊封面报道](docs/caixin-weekly-coverstory.png)
 ![agent推送的邮件](docs/email-summary.png)
 
@@ -9,12 +9,12 @@
 本项目基于NVIDIA官方NeMo Agent Toolkit的开发架构，实现了一个 React agent。
 
 ### Agent Workflow简介: 
-自定义的caixin_scrapper 工具抓取财新周刊封面报道信息，将摘要(其实为json数组)写入 memory，email_newsletter 读取 memory，将摘要内容写入正文，利用 smfp服务发送到用户邮箱。
+自定义的`caixin_scrapper`工具抓取财新周刊封面报道信息，将摘要内容写入`memory`， 自定义的`email_newsletter`读取`memory`，将摘要内容写入正文，利用smtp服务发送邮件到用户邮箱。
 
 ### ✨ 核心特性
 - 🤖 **官方架构**: 100%使用NVIDIA官方NeMo Agent Toolkit
-- 🌐 **抓取财新周刊封面报道内容**: 
-- 📧 **smtp邮件服务**: 
+- 🌐 **抓取财新周刊封面报道内容**: Python中的`httpx`发送请求，得到形式为json数组的内容，然后写入`memory`
+- 📧 **smtp邮件服务**: 读取`memory`, 处理json内容转换为html, 结合`aiosmtplib`库发送邮件
 - 🧬 **Redis实例实现Memory功能**: 
 - 🎨 **现代界面**: 官方UI，支持实时对话和流式响应
 - 🚀 **一键部署**: 跨平台安装脚本，支持Windows/Linux/macOS
@@ -54,23 +54,27 @@ HACKATHON_AIQTOOLKIT
         ├── start.sh
         └── stop.sh
 ```
-### 模型选择
 
 ## 🚀 快速开始
+**Note:在启动之前需要将 baseline 版本，即比赛项目的初始版本跑通，确保环境和工具没有问题**
 
 ### ⚡ 一键启动
-
 #### 克隆项目
+#### 克隆主仓库
 ```bash
-git clone https://github.com/HeKun-NVIDIA/hackathon_aiqtoolkit.git
+git clone https://github.com/siningsun/nvidia-hackathon-2025-caixin-email
 cd hackathon_aiqtoolkit
 ```
-### 🔑 配置环境变量
+#### 克隆子仓库
+```bash
+cd NeMo-Agent-Toolkit
+git clone https://github.com/siningsun/nvidia-hackathon-2025-caixin-email-backend
+```
 
-安装完成后，您需要配置以下API密钥：
+#### 🔑 配置环境变量
 
 #### 1. Tavily搜索API密钥
-在`install.sh`文件中185行左右，将Your API Key替换成你自己的Tavily API Key 来保证搜索功能正常
+在`start.sh`文件中11行左右，将Your API Key替换成你自己的Tavily API Key 来保证搜索功能正常
 ```bash
 # 设置环境变量
 export TAVILY_API_KEY=Your API Key
@@ -80,34 +84,33 @@ export TAVILY_API_KEY=Your API Key
 2. 注册账户并获取免费API密钥
 3. 将密钥添加到环境变量中
 
-#### 2. 大模型API密钥
-
-编辑 `install.sh` 文件中154行左右,将Your API Key替换成你自己的Bailian API Key：
-
+#### 2. 创建.env 文件
+**需要在.env 文件中填写下面参数，参数会注入到 hackathon.config.yml 核心配置文件中**
 ```yaml
-llms:
-  # 默认使用Bailian API (用户可修改)
-  default_llm:
-    _type: openai
-    model_name: "qwen-plus"
-    api_key: "Your API Key"
-    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    temperature: 0.7
-    max_tokens: 2048
+EMAIL_ADDRESS=你的邮箱地址
+EMAIL_CODE=你的邮箱授权码
+CAIXIN_PASSWORD=你的财新周刊邮箱账号密码
+DASHSCOPE_API_KEY=你的阿里云百炼 api-key
+NIM_API_KEY=你的 nvidia api-key
 ```
-
-**支持的API提供商**：
-- **阿里云百炼平台Qwen系列**: `https://bailian.console.aliyun.com/?tab=model#/model-market`
-- **其他**: 任何OpenAI兼容的API
 
 ### 🎮 启动系统
 
-#### 启动Redis实例
+####  Docker启动Redis实例以实现 Memory 功能
 
-```
-docker build 
-```
+```bash
+# 拉取官方 Redis 镜像
+docker pull redis:latest
 
+# 启动一个 Redis 容器
+docker run -d \
+  --name my-redis \
+  -p 6379:6379 \
+  -v redis-data:/data \
+  redis:latest \
+  redis-server --appendonly yes
+```
+#### 启动Agent
 ```bash
 # 启动服务
 cd NeMo-Agent-Toolkit
@@ -127,8 +130,8 @@ cd NeMo-Agent-Toolkit
 
 ### 测试
 ```
-用户: 北京今天的天气怎么样，气温是多少？
-AI: 今天北京天气晴朗，气温在18℃至31℃之间，当前温度约30℃，西南风3级，相对湿度43%，空气质量良好，体感温度舒适。白天最高气温可达31℃，夜间最低18℃，全天无降水，紫外线较强，建议做好防晒措施。
+用户: 请你帮我整理财新周刊最新的封面报道，然后发送邮件到我的邮箱。
+AI: 我已经成功为您整理了财新周刊最新的5篇封面报道，包括《人民币国际化机遇》、《越南革新新局》、《"到越南去"历经多轮热潮 当下进还是退？》、《商品期货市场宽幅波动 "反内卷"行情将如何演绎？》和《寻找"慢牛"》，并已将详细内容发送至您的邮箱690058381@qq.com。请注意查收！
 ```
 
 ## 📚 相关资源
